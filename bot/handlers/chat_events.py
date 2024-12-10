@@ -27,7 +27,7 @@ async def add_chat_to_list(event: ChatMemberUpdated):
                 chat_settings[str(chat_id)] = {"keywords": [], "banned_users": []}
                 save_chat_settings(chat_settings)
 
-            await event.bot.send_message(chat_id, "Чат добавлен в список для модерации.")
+            # await event.bot.send_message(chat_id, "Чат добавлен в список для модерации.")
 
 
 @router.message()
@@ -56,8 +56,26 @@ async def moderate_messages(message: Message):
                 save_chat_settings(chat_settings)
 
                 # Уведомляем о бане
-                await message.answer(
-                    f"Пользователь {message.from_user.full_name} был заблокирован за использование запрещенных слов."
-                )
+                # await message.answer(
+                #    f"Пользователь {message.from_user.full_name} был заблокирован за использование запрещенных слов."
+                # )
             except Exception as e:
                 await message.answer(f"Произошла ошибка при бане пользователя: {e}")
+
+@router.my_chat_member()
+async def handle_bot_removal(event: ChatMemberUpdated):
+    chat_id = str(event.chat.id)
+
+    # Если бот был удалён из чата
+    if event.new_chat_member.status == "left":
+        # Удаляем чат из chat_list.json
+        if chat_id in chat_list:
+            del chat_list[chat_id]
+            save_chat_list(chat_list)
+
+        # Удаляем настройки чата из chat_settings.json
+        if chat_id in chat_settings:
+            del chat_settings[chat_id]
+            save_chat_settings(chat_settings)
+
+        print(f"Бот был удалён из чата {chat_id}. Он больше не отслеживается.")
