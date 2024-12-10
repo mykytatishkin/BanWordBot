@@ -50,8 +50,16 @@ def save_settings():
         logger.info("Настройки успешно сохранены в файл.")
 
 
+# Проверка корректности загруженных настроек
+def validate_settings():
+    global chat_settings
+    if not isinstance(chat_settings, dict):
+        chat_settings = {}
+
+
 # Глобальная переменная для хранения настроек
 chat_settings = load_settings()
+validate_settings()
 
 # Глобальная переменная для отслеживания выбранной группы
 selected_groups = {}
@@ -122,7 +130,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     action = context.user_data.get("action")
     group_id = selected_groups.get(user_id)
 
-    if not group_id:
+    if not group_id or group_id not in chat_settings:
         await update.message.reply_text("Группа не выбрана. Используйте меню команд для выбора группы.")
         return
 
@@ -130,17 +138,40 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keywords = update.message.text.split()
         chat_settings[group_id].setdefault("keywords", []).extend(keywords)
         save_settings()
-        await update.message.reply_text(f"Ключевые слова добавлены в группу {group_id}: {', '.join(keywords)}")
+        await update.message.reply_text(f"Ключевые слова добавлены в группу {chat_settings[group_id]['group_name']} [{group_id}]: {', '.join(keywords)}")
     elif action == "remove_keywords":
         keywords_to_remove = update.message.text.split()
         current_keywords = chat_settings[group_id].get("keywords", [])
         removed_keywords = [kw for kw in keywords_to_remove if kw in current_keywords]
-        chat_settings[group_id]["keywords"] = [kw for kw in current_keywords if kw not in removed_keywords]
-        save_settings()
-        await update.message.reply_text(f"Удалены ключевые слова из группы {group_id}: {', '.join(removed_keywords)}")
+        if removed_keywords:
+            chat_settings[group_id]["keywords"] = [kw for kw in current_keywords if kw not in removed_keywords]
+            save_settings()
+            await update.message.reply_text(f"Удалены ключевые слова из группы {chat_settings[group_id]['group_name']} [{group_id}]: {', '.join(removed_keywords)}")
+        else:
+            await update.message.reply_text("Ключевые слова не найдены в настройках группы.")
 
-    # Очистка действия после обработки
+    # Очищаем действие после выполнения
     context.user_data.pop("action", None)
+
+
+# Обработчик для блокировки пользователей на основе ключевых слов
+async def monitor_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.message.chat_id)
+    text = update.message.text.lower()
+
+    if chat_id in chat_settings:
+        keywords = chat_settings[chat_id].get("keywords", [])
+        if any(keyword.lower() in text for keyword in keywords):
+            user_id = update.message.from_user.id
+            # Удаление сообщения
+            await update.message.delete()
+            # Блокировка пользователя
+            await context.bot.ban_chat_member(chat_id, user_id)
+            # Уведомление группы
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"Пользователь @{update.message.from_user.username} заблокирован за использование запрещенных слов."
+            )
 
 
 # Обработчик для добавления новой группы
@@ -157,12 +188,10 @@ async def handle_group_update(update: Update, context: ContextTypes.DEFAULT_TYPE
             }
             save_settings()
             logger.info(f"Добавлена новая группа: {group_name} [{group_id}]")
-
-            # Отправляем сообщение в группу
-            # await context.bot.send_message(
-            #     chat_id=group_id,
-            #     text=f"Группа '{group_name}' [{group_id}] добавлена в настройки бота. Вы можете настроить её через меню команд Telegram."
-            # )
+            await context.bot.send_message(
+                chat_id=group_id,
+                text=f"Группа '{group_name}' [{group_id}] добавлена. Настройте её через меню команд."
+            )
 
 
 # Установка меню команд Telegram
@@ -175,32 +204,30 @@ async def set_bot_commands(application: Application):
     logger.info("Меню команд Telegram успешно установлено.")
 
 
-# Основная функция запуска
 def main():
-    # Загружаем конфигурацию
     config = load_config()
     bot_token = config["telegram_token"]
 
     # Создаем приложение
     application = Application.builder().token(bot_token).build()
 
-    # Команды
+    # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("list_groups", list_groups))
-
-    # Обработчики кнопок и текстовых сообщений
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, monitor_messages))
+    application.add_handler(ChatMemberHandler(handle_group_update, filters.StatusUpdate.NEW_CHAT_MEMBERS))
 
-    # Обработчик изменений чата, чтобы добавить группу
-    application.add_handler(ChatMemberHandler(handle_group_update, filters.StatusUpdate.LEFT_CHAT_MEMBER))
+    # Установка команд Telegram
+    application.bot.set_my_commands([
+        BotCommand("start", "Начать работу с ботом"),
+        BotCommand("list_groups", "Показать список групп"),
+    ])
+    logger.info("Меню команд Telegram успешно установлено.")
 
-    # Запуск приложения
+    # Запуск polling
     application.run_polling()
-
-    # Установка меню команд Telegram
-    asyncio.run(set_bot_commands(application))
-
 
 if __name__ == '__main__':
     main()
