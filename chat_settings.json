@@ -1,6 +1,11 @@
 {
     "-1002264996867": {
-        "keywords": ["abc", "test"],
-        "banned_users": []
+        "keywords": [
+            "abc",
+            "test"
+        ],
+        "banned_users": [
+            7434085039
+        ]
     }
 }

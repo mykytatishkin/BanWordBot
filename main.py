@@ -60,6 +60,9 @@ def main_menu():
     builder.row(KeyboardButton(text="Список ключевых слов"))
     return builder.as_markup(resize_keyboard=True)
 
+@dp.message(lambda msg: msg.text == "Список ключевых слов")
+async def list_keywords_prompt(message: Message):
+    await message.answer("Отправьте команду в формате:\n/list_keywords <chat_id>\nПример:\n/list_keywords -1002264996867")
 
 # Обработка команды /start
 @dp.message(Command("start"))
@@ -118,6 +121,7 @@ async def list_keywords(message: Message):
 @dp.message()
 async def delete_prohibited_message(message: Message):
     chat_id = str(message.chat.id)
+    user_id = message.from_user.id
 
     # Проверяем, есть ли настройки для чата
     if chat_id not in chat_settings:
@@ -132,13 +136,25 @@ async def delete_prohibited_message(message: Message):
     for keyword in keywords:
         if keyword.lower() in message.text.lower():
             try:
-                await message.delete()  # Удаляем сообщение
+                # Удаляем сообщение
+                await message.delete()
                 logging.info(f"Удалено сообщение с запрещённым словом '{keyword}' в чате {chat_id}.")
-                return
-            except Exception as e:
-                logging.error(f"Не удалось удалить сообщение: {e}")
-                return
 
+                # Пытаемся заблокировать пользователя
+                try:
+                    await bot.ban_chat_member(chat_id, user_id)
+                    logging.info(f"Пользователь {user_id} забанен в чате {chat_id}.")
+
+                    # Сохраняем ID забаненного пользователя
+                    chat_settings[chat_id].setdefault("banned_users", []).append(user_id)
+                    save_settings()
+                except Exception as ban_error:
+                    logging.error(f"Ошибка при блокировке пользователя {user_id}: {ban_error}")
+
+                return
+            except Exception as delete_error:
+                logging.error(f"Не удалось удалить сообщение: {delete_error}")
+                return
 
 # Обработка добавления бота в чат
 @dp.chat_member(ChatMemberUpdatedFilter(member_status_changed=["member", "administrator"]))
