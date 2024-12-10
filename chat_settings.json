@@ -1,10 +1,18 @@
 {
     "-1002489248743": {
-        "keywords": [],
-        "banned_users": []
+        "keywords": [
+            "a"
+        ],
+        "banned_users": [
+            7434085039
+        ]
     },
     "-1002427972359": {
-        "keywords": [],
-        "banned_users": []
+        "keywords": [
+            "b"
+        ],
+        "banned_users": [
+            7434085039
+        ]
     }
 }

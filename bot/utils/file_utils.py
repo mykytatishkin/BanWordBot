@@ -5,15 +5,16 @@ CHATS_FILE = "chat_list.json"
 
 def load_chat_settings():
     try:
-        with open(SETTINGS_FILE, "r") as settings_file:
-            return json.load(settings_file)
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
     except FileNotFoundError:
         return {}
+    except json.JSONDecodeError:
+        return {}
 
-def save_chat_settings(chat_settings):
-    with open(SETTINGS_FILE, "w") as settings_file:
-        json.dump(chat_settings, settings_file, indent=4)
-
+def save_chat_settings(data):
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4, ensure_ascii=False)
 def load_chat_list():
     try:
         with open(CHATS_FILE, "r") as chats_file:
@@ -24,3 +25,4 @@ def load_chat_list():
 def save_chat_list(chat_list):
     with open(CHATS_FILE, "w") as chats_file:
         json.dump(chat_list, chats_file, indent=4)
+

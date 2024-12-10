@@ -32,24 +32,32 @@ async def add_chat_to_list(event: ChatMemberUpdated):
 
 @router.message()
 async def moderate_messages(message: Message):
-    chat_id = str(message.chat.id)
-    if chat_id in chat_settings:
-        # Проверяем наличие запрещенных слов
-        keywords = chat_settings.get(chat_id, {}).get("keywords", [])
-        if any(keyword in message.text.lower() for keyword in keywords):
-            # Удаляем сообщение
-            await message.delete()
+    if not message.text:
+        return  # Игнорируем сообщения без текста (например, фото, видео, стикеры и т.д.)
 
-            # Баним пользователя
+    chat_id = str(message.chat.id)
+
+    # Проверяем, есть ли настройки для текущего чата
+    if chat_id in chat_settings:
+        # Получаем ключевые слова для чата
+        keywords = chat_settings[chat_id].get("keywords", [])
+
+        # Если в сообщении есть запрещенные слова
+        if any(keyword in message.text.lower() for keyword in keywords):
             try:
+                # Удаляем сообщение
+                await message.delete()
+
+                # Баним пользователя
                 await message.bot.ban_chat_member(chat_id=chat_id, user_id=message.from_user.id)
 
-                # Обновляем настройки (добавляем пользователя в список забаненных)
+                # Сохраняем ID пользователя в список забаненных
                 chat_settings[chat_id]["banned_users"].append(message.from_user.id)
                 save_chat_settings(chat_settings)
 
-                # Отправляем уведомление в чат
+                # Уведомляем о бане
                 await message.answer(
-                    f"Пользователь {message.from_user.full_name} был заблокирован за использование запрещенных слов.")
+                    f"Пользователь {message.from_user.full_name} был заблокирован за использование запрещенных слов."
+                )
             except Exception as e:
-                await message.answer(f"Не удалось заблокировать пользователя: {e}")
+                await message.answer(f"Произошла ошибка при бане пользователя: {e}")

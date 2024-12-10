@@ -1,6 +1,6 @@
 from aiogram import Router
 from aiogram.types import Message
-from bot.utils.file_utils import load_chat_list, load_chat_settings
+from bot.utils.file_utils import load_chat_list, load_chat_settings, save_chat_settings
 
 router = Router()
 
@@ -19,6 +19,28 @@ async def list_chats(message: Message):
 @router.message(lambda msg: msg.text == "Добавить ключевое слово")
 async def add_keyword_prompt(message: Message):
     await message.answer("Отправьте команду в формате:\n/add_keyword <chat_id> <ключевое_слово>")
+
+@router.message(lambda msg: msg.text and msg.text.startswith("/add_keyword"))
+async def add_keyword(message: Message):
+    try:
+        # Извлекаем параметры из команды
+        _, chat_id, keyword = message.text.split(" ", 2)
+
+        # Проверяем, есть ли настройки для указанного чата
+        if chat_id not in chat_settings:
+            chat_settings[chat_id] = {"keywords": [], "banned_users": []}
+
+        # Добавляем ключевое слово, если его еще нет
+        if keyword not in chat_settings[chat_id]["keywords"]:
+            chat_settings[chat_id]["keywords"].append(keyword)
+            save_chat_settings(chat_settings)  # Сохраняем настройки в файл
+            await message.answer(f"Ключевое слово '{keyword}' добавлено для чата {chat_id}.")
+        else:
+            await message.answer(f"Ключевое слово '{keyword}' уже существует в чате {chat_id}.")
+    except ValueError:
+        await message.answer("Используйте формат: /add_keyword <chat_id> <ключевое_слово>")
+    except Exception as e:
+        await message.answer(f"Ошибка: {e}")
 
 @router.message(lambda msg: msg.text == "Удалить ключевое слово")
 async def remove_keyword_prompt(message: Message):
