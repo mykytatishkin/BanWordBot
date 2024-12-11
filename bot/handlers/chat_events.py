@@ -60,7 +60,8 @@ async def moderate_messages(message: Message):
                 #    f"Пользователь {message.from_user.full_name} был заблокирован за использование запрещенных слов."
                 # )
             except Exception as e:
-                await message.answer(f"Произошла ошибка при бане пользователя: {e}")
+                print(f"Произошла ошибка при бане пользователя: {e}")
+                # await message.answer(f"Произошла ошибка при бане пользователя: {e}")
 
 @router.my_chat_member()
 async def handle_bot_removal(event: ChatMemberUpdated):
