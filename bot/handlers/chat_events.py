@@ -32,28 +32,36 @@ async def add_chat_to_list(event: ChatMemberUpdated):
 
 @router.message()
 async def moderate_messages(message: Message):
-    print(f"Получено сообщение из чата {message.chat.id}: {message.text}")
     if not message.text:
-        print("Сообщение не содержит текста, игнорируем.")
-        return
+        return  # Игнорируем сообщения без текста
 
     chat_id = str(message.chat.id)
     chat_settings = load_chat_settings()
 
-    # Проверяем, есть ли настройки для текущего чата
+    # Проверяем, есть ли настройки для чата
     if chat_id in chat_settings:
         keywords = chat_settings[chat_id].get("keywords", [])
         print(f"Ключевые слова для чата {chat_id}: {keywords}")
 
-        # Если сообщение содержит запрещённые слова
+        # Если сообщение содержит запрещённое слово
         if any(keyword.lower() in message.text.lower() for keyword in keywords):
             try:
                 # Удаляем сообщение
                 await message.delete()
                 print(f"Удалено сообщение: {message.text}")
-            except Exception as e:
-                print(f"Ошибка при удалении сообщения: {e}")
 
+                # Бан пользователя
+                await message.bot.ban_chat_member(chat_id=chat_id, user_id=message.from_user.id)
+                print(f"Пользователь {message.from_user.id} заблокирован.")
+
+                # Добавляем ID пользователя в настройки
+                if "banned_users" not in chat_settings[chat_id]:
+                    chat_settings[chat_id]["banned_users"] = []
+                chat_settings[chat_id]["banned_users"].append(message.from_user.id)
+                save_chat_settings(chat_settings)
+
+            except Exception as e:
+                print(f"Ошибка при модерации: {e}")
 @router.my_chat_member()
 async def handle_bot_removal(event: ChatMemberUpdated):
     chat_id = str(event.chat.id)
