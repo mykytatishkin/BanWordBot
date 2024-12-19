@@ -1,31 +1,37 @@
 import json
+import os
 
-SETTINGS_FILE = "chat_settings.json"
-CHATS_FILE = "chat_list.json"
+SETTINGS_FILE = "bot/utils/chat_settings.json"
+CHATS_FILE = "bot/utils/chat_list.json"
+
+def load_json(file_path):
+    """Загружает данные из JSON-файла. Если файла нет, создаёт пустой."""
+    if not os.path.exists(file_path):
+        save_json(file_path, {})
+    with open(file_path, "r", encoding="utf-8") as file:
+        try:
+            return json.load(file)
+        except json.JSONDecodeError:
+            print(f"Ошибка загрузки JSON из {file_path}. Возвращён пустой словарь.")
+            return {}
+
+def save_json(file_path, data):
+    """Сохраняет данные в JSON-файл."""
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4, ensure_ascii=False)
 
 def load_chat_list():
-    try:
-        with open(CHATS_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        return {}
+    """Загружает список чатов."""
+    return load_json(CHATS_FILE)
 
 def save_chat_list(data):
-    with open(CHATS_FILE, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
+    """Сохраняет список чатов."""
+    save_json(CHATS_FILE, data)
 
 def load_chat_settings():
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        return {}
+    """Загружает настройки чатов."""
+    return load_json(SETTINGS_FILE)
 
 def save_chat_settings(data):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
-
+    """Сохраняет настройки чатов."""
+    save_json(SETTINGS_FILE, data)

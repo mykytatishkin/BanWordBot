@@ -5,7 +5,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from bot.utils.file_utils import load_chat_list, load_chat_settings, save_chat_settings
+import logging
 
+logging.basicConfig(level=logging.INFO)
 router = Router()
 storage = MemoryStorage()  # Используем FSM Storage
 
@@ -24,7 +26,10 @@ class ChatCallbackData(CallbackData, prefix="chat"):
 
 # Список чатов
 @router.message(F.chat.type == "private", F.text == "Список чатов")
+@router.message(F.chat.type == "private", F.text == "Список чатов")
 async def list_chats(message: Message):
+    chat_list = load_chat_list()  # Перезагружаем chat_list из файла
+
     if not chat_list:
         await message.answer("Бот еще не добавлен ни в один чат.")
         return
@@ -64,7 +69,10 @@ async def add_keyword_finish(message: Message, state: FSMContext):
     chat_id = data.get("chat_id")
     keyword = message.text.strip()
 
+    chat_settings = load_chat_settings()  # Перезагружаем настройки
+
     if not chat_id:
+        logging.error("Чат не выбран, но функция add_keyword_finish вызвана.")
         await message.answer("Чат не выбран. Вернитесь в меню и выберите чат.")
         await state.clear()
         return
@@ -74,11 +82,15 @@ async def add_keyword_finish(message: Message, state: FSMContext):
     if keyword not in chat_settings[chat_id]["keywords"]:
         chat_settings[chat_id]["keywords"].append(keyword)
         save_chat_settings(chat_settings)
+        logging.info(f"Добавлено ключевое слово '{keyword}' для чата {chat_id}.")
         await message.answer(f"Ключевое слово '{keyword}' добавлено для чата {chat_id}.")
     else:
+        logging.warning(f"Ключевое слово '{keyword}' уже существует для чата {chat_id}.")
         await message.answer(f"Ключевое слово '{keyword}' уже существует в чате {chat_id}.")
 
     await state.clear()
+
+
 
 # Удаление ключевого слова
 @router.callback_query(ChatCallbackData.filter(F.action == "remove_keyword"))
@@ -111,8 +123,10 @@ async def remove_keyword_finish(message: Message, state: FSMContext):
 # Список ключевых слов
 @router.callback_query(ChatCallbackData.filter(F.action == "list_keywords"))
 async def list_keywords(callback: CallbackQuery, callback_data: ChatCallbackData):
+    chat_settings = load_chat_settings()  # Перезагружаем настройки
     chat_id = callback_data.chat_id
     keywords = chat_settings.get(chat_id, {}).get("keywords", [])
+
     if keywords:
         await callback.message.answer(f"Ключевые слова для чата {chat_id}:\n" + "\n".join(keywords))
     else:

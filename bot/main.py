@@ -24,7 +24,10 @@ logging.basicConfig(level=logging.INFO)
 
 async def main():
     logging.info("Бот запускается...")
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logging.error(f"Ошибка запуска бота: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
