@@ -13,3 +13,4 @@ python-dotenv==1.0.0
 pytz==2023.3
 typing-extensions==4.8.0
 yarl==1.9.2
+pyrogram==3.15
