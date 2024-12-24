@@ -32,6 +32,18 @@ class ChatCallbackData(CallbackData, prefix="chat"):
     chat_id: str
     action: str
 
+async def update_message(callback, text, reply_markup=None):
+    current_text = callback.message.text
+    current_markup = callback.message.reply_markup
+
+    # Проверяем, изменилось ли сообщение или разметка
+    if current_text == text and current_markup == reply_markup:
+        logging.info("Сообщение и разметка не изменились, обновление пропущено.")
+        return
+
+    # Обновляем сообщение
+    await callback.message.edit_text(text, reply_markup=reply_markup)
+
 # Список чатов
 @router.message(F.chat.type == "private", F.text == "Список чатов")
 @router.message(F.chat.type == "private", F.text == "Список чатов")
@@ -55,7 +67,7 @@ async def list_chats(message: Message):
 @router.callback_query(ChatCallbackData.filter(F.action == "select"))
 async def chat_selected(callback: CallbackQuery, callback_data: ChatCallbackData):
     chat_id = callback_data.chat_id
-    # Создание кнопок для действий
+
     buttons = [
         [
             InlineKeyboardButton(
@@ -80,8 +92,9 @@ async def chat_selected(callback: CallbackQuery, callback_data: ChatCallbackData
     ]
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    # Редактирование сообщения с добавлением кнопок
-    await callback.message.edit_text(
+    # Обновляем сообщение, используя функцию update_message
+    await update_message(
+        callback,
         text=f"Вы выбрали чат {chat_id}. Выберите действие:",
         reply_markup=keyboard
     )

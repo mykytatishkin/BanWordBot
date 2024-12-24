@@ -1,14 +1,14 @@
-import json
 import os
+import json
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Базовая директория utils
 SETTINGS_FILE = os.path.join(BASE_DIR, "chat_settings.json")
 CHATS_FILE = os.path.join(BASE_DIR, "chat_list.json")
 
 def load_json(file_path):
-    """Загружает данные из JSON-файла. Если файла нет, создаёт пустой."""
+    """Загружает данные из JSON-файла. Если файла нет, создаёт пустой файл."""
     if not os.path.exists(file_path):
-        save_json(file_path, {})
+        save_json(file_path, {})  # Создаём пустой файл
     with open(file_path, "r", encoding="utf-8") as file:
         try:
             return json.load(file)
@@ -36,9 +36,3 @@ def load_chat_settings():
 def save_chat_settings(data):
     """Сохраняет настройки чатов."""
     save_json(SETTINGS_FILE, data)
-
-    def save_chat_list(data):
-        save_json(CHATS_FILE, data)
-
-    def save_chat_settings(data):
-        save_json(SETTINGS_FILE, data)
