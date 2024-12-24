@@ -35,3 +35,9 @@ def load_chat_settings():
 def save_chat_settings(data):
     """Сохраняет настройки чатов."""
     save_json(SETTINGS_FILE, data)
+
+    def save_chat_list(data):
+        save_json(CHATS_FILE, data)
+
+    def save_chat_settings(data):
+        save_json(SETTINGS_FILE, data)
