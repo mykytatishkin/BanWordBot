@@ -249,17 +249,23 @@ async def import_chat_settings(message: Message, state: FSMContext):
 async def remove_from_tracking(callback: CallbackQuery, callback_data: ChatCallbackData):
     chat_id = callback_data.chat_id
 
-    # Удаляем чат из chat_list.json
-    if chat_id in chat_list:
-        del chat_list[chat_id]
-        save_chat_list(chat_list)
-        logging.info(f"Чат {chat_id} удалён из chat_list.json.")
+    try:
+        # Загружаем данные из файлов
+        chat_list = load_chat_list()  # Убедитесь, что эта функция работает корректно
+        chat_settings = load_chat_settings()
 
-    # Удаляем настройки чата из chat_settings.json
-    if chat_id in chat_settings:
-        del chat_settings[chat_id]
-        save_chat_settings(chat_settings)
-        logging.info(f"Настройки чата {chat_id} удалены из chat_settings.json.")
+        # Удаляем чат из chat_list.json
+        if chat_id in chat_list:
+            del chat_list[chat_id]
+            save_chat_list(chat_list)
 
-    await callback.message.answer(f"Чат {chat_id} успешно удалён из отслеживаемых.")
-    await callback.message.delete()
+        # Удаляем настройки чата из chat_settings.json
+        if chat_id in chat_settings:
+            del chat_settings[chat_id]
+            save_chat_settings(chat_settings)
+
+        # Уведомляем пользователя
+        await callback.message.edit_text(f"Чат {chat_id} успешно удалён из отслеживаемых.")
+    except Exception as e:
+        logging.error(f"Ошибка при удалении чата {chat_id}: {e}")
+        await callback.message.answer(f"Произошла ошибка: {e}")
