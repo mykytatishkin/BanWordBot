@@ -1,8 +1,9 @@
 import json
 import os
 
-SETTINGS_FILE = "bot/utils/chat_settings.json"
-CHATS_FILE = "bot/utils/chat_list.json"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SETTINGS_FILE = os.path.join(BASE_DIR, "chat_settings.json")
+CHATS_FILE = os.path.join(BASE_DIR, "chat_list.json")
 
 def load_json(file_path):
     """Загружает данные из JSON-файла. Если файла нет, создаёт пустой."""
