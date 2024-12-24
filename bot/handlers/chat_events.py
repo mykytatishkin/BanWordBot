@@ -62,6 +62,40 @@ async def moderate_messages(message: Message):
 
             except Exception as e:
                 print(f"Ошибка при модерации: {e}")
+
+@router.edited_message()
+async def moderate_edited_messages(message: Message):
+    if not message.text:
+        return  # Игнорируем сообщения без текста
+
+    chat_id = str(message.chat.id)
+    chat_settings = load_chat_settings()
+
+    # Проверяем, есть ли настройки для чата
+    if chat_id in chat_settings:
+        keywords = chat_settings[chat_id].get("keywords", [])
+        print(f"Ключевые слова для чата {chat_id}: {keywords}")
+
+        # Если редактированное сообщение содержит запрещённое слово
+        if any(keyword.lower() in message.text.lower() for keyword in keywords):
+            try:
+                # Удаляем сообщение
+                await message.delete()
+                print(f"Удалено редактированное сообщение: {message.text}")
+
+                # Бан пользователя
+                await message.bot.ban_chat_member(chat_id=chat_id, user_id=message.from_user.id)
+                print(f"Пользователь {message.from_user.id} заблокирован за редактированное сообщение.")
+
+                # Добавляем ID пользователя в настройки
+                if "banned_users" not in chat_settings[chat_id]:
+                    chat_settings[chat_id]["banned_users"] = []
+                chat_settings[chat_id]["banned_users"].append(message.from_user.id)
+                save_chat_settings(chat_settings)
+
+            except Exception as e:
+                print(f"Ошибка при модерации редактированного сообщения: {e}")
+
 @router.my_chat_member()
 async def handle_bot_removal(event: ChatMemberUpdated):
     chat_id = str(event.chat.id)
